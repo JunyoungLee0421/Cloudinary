@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
 
 
 	try {
-		const users = await userCollection.find().project({ first_name: 1, last_name: 1, email: 1, _id: 1 }).toArray();
+		const users = await userCollection.find().project({ first_name: 1, last_name: 1, email: 1, _id: 1, image_id: 1 }).toArray();
 
 		if (users === null) {
 			res.render('error', { message: 'Error connecting to MongoDB' });
@@ -85,8 +85,8 @@ function sleep(ms) {
 }
 
 router.post('/setUserPic', upload.single('image'), function (req, res, next) {
+	console.log("inside user pic")
 	let image_uuid = uuid();
-	let pet_id = req.body.pet_id;
 	let user_id = req.body.user_id;
 	let buf64 = req.file.buffer.toString('base64');
 	stream = cloudinary.uploader.upload("data:image/octet-stream;base64," + buf64, async function (result) {
@@ -99,28 +99,28 @@ router.post('/setUserPic', upload.single('image'), function (req, res, next) {
 			// Joi validate
 			const schema = Joi.object(
 				{
-					pet_id: Joi.string().alphanum().min(24).max(24).required(),
 					user_id: Joi.string().alphanum().min(24).max(24).required()
 				});
 
-			const validationResult = schema.validate({ pet_id, user_id });
+			const validationResult = schema.validate({ user_id });
 			if (validationResult.error != null) {
 				console.log(validationResult.error);
 
-				res.render('error', { message: 'Invalid pet_id or user_id' });
+				res.render('error', { message: 'Invalid user_id' });
 				return;
 			}
-			const success = await petCollection.updateOne({ "_id": new ObjectId(pet_id) },
+			const success = await userCollection.updateOne({ "_id": new ObjectId(user_id) },
 				{ $set: { image_id: image_uuid } },
 				{}
 			);
 
+			console.log(success)
 			if (!success) {
 				res.render('error', { message: 'Error uploading pet image to MongoDB' });
 				console.log("Error uploading pet image");
 			}
 			else {
-				res.redirect(`/showPets?id=${user_id}`);
+				res.redirect(`/`);
 			}
 		}
 		catch (ex) {
@@ -145,7 +145,6 @@ router.post('/setPetPic', upload.single('image'), function (req, res, next) {
 			console.log(result);
 
 			console.log("userId: " + user_id);
-
 
 			// Joi validate
 			const schema = Joi.object(
